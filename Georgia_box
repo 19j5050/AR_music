@@ -1,0 +1,175 @@
+import UIKit
+import SceneKit
+import ARKit
+import AVFoundation
+​
+class ViewController: UIViewController, ARSCNViewDelegate, AVAudioPlayerDelegate {
+    
+    var audioPlayer:AVAudioPlayer!
+    
+    @IBOutlet var button:UIButton!
+    @IBOutlet var sceneView: ARSCNView!
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // デリゲートを設定
+        sceneView.delegate = self
+        
+        // シーンを作成して登録
+        sceneView.scene = SCNScene()
+        
+        // ライトの追加
+        sceneView.autoenablesDefaultLighting = true;
+        
+        // 画像認識の参照用画像をアセットから取得
+        let configuration = ARImageTrackingConfiguration()
+        configuration.trackingImages = ARReferenceImage.referenceImages(inGroupNamed: "AR Resources", bundle: nil)!
+        sceneView.session.run(configuration)
+        
+        sceneView.showsStatistics = true
+​
+        let scene = SCNScene()
+​
+        sceneView.scene = scene
+​
+        let str = "მოგესალმებით"
+        let depth:CGFloat = 0.05
+        let text = SCNText(string: str, extrusionDepth: depth)
+        text.font = UIFont(name: "NotoSansGeorgian-CondensedMedium.ttf", size: 0.001)
+​
+        let m1 = SCNMaterial()
+        m1.diffuse.contents = UIColor.blue
+        
+        m1.lightingModel = .physicallyBased
+        m1.metalness.contents = 0.025
+        m1.metalness.intensity = 0.025
+        m1.roughness.intensity = 0.0
+        
+        let m2 = SCNMaterial()
+        m2.diffuse.contents = UIColor.red
+        m2.lightingModel = .physicallyBased
+        m2.metalness.contents = 0.025
+        m2.metalness.intensity = 0.025
+        m2.roughness.intensity = 0.0
+        
+        let m3 = SCNMaterial()
+        m3.diffuse.contents = UIColor.purple
+        m3.lightingModel = .physicallyBased
+        m3.metalness.contents = 0.025
+        m3.metalness.intensity = 0.025
+        m3.roughness.intensity = 0.0
+        
+        let m4 = SCNMaterial()
+        m4.diffuse.contents = UIColor.yellow
+        let m5 = SCNMaterial()
+        m5.diffuse.contents = UIColor.yellow
+​
+        text.materials = [m1, m2, m3, m4, m5]
+        let textNode = SCNNode(geometry: text)
+        
+        let (min, max) = (textNode.boundingBox)
+        let textBoundsWidth = (max.x - min.x)
+        let textBoundsheight = (max.y - min.y)
+        let z = CGFloat(-100.0)
+        textNode.pivot = SCNMatrix4MakeTranslation(textBoundsWidth/2 + min.x, textBoundsheight/2 + min.y, 0)
+        textNode.position = SCNVector3(0, 0, z)
+​
+        sceneView.scene.rootNode.addChildNode(textNode)
+​
+        sceneView.autoenablesDefaultLighting = true
+​
+        sceneView.debugOptions = [.showBoundingBoxes, .showWireframe]
+        
+    }
+    
+    // マーカーが検出されたとき呼ばれる
+    func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
+        // ノードの作成
+        let boxNode = SCNNode()
+        // ジオメトリと位置の設定
+        boxNode.geometry = SCNBox(width:0.05, height:0.05, length:0.05, chamferRadius: 0)
+        boxNode.position.y += 0.025
+        // 画像マーカーの子要素にする
+        node.addChildNode(boxNode)
+        
+        /*if(anchor.name == "ジョージア 漫画") {
+            // scnファイルからシーンを読み込む
+            let scene = SCNScene(named: "art.scnassets/tinker.scn")
+            // シーンからノードを検索
+            let rabbitNode = (scene?.rootNode.childNode(withName: "obj_0", recursively: false))!
+            // 検出面の子要素にする
+            node.addChildNode(rabbitNode)
+        }*/
+        
+        
+        
+        // 再生する audio ファイルのパスを取得
+        let audioPath = Bundle.main.path(forResource: "14664", ofType:"mp3")!
+        let audioUrl = URL(fileURLWithPath: audioPath)
+        
+        
+        // auido を再生するプレイヤーを作成する
+        var audioError:NSError?
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: audioUrl)
+        } catch let error as NSError {
+            audioError = error
+            audioPlayer = nil
+        }
+        
+        // エラーが起きたとき
+        if let error = audioError {
+            print("Error \(error.localizedDescription)")
+        }
+        
+        audioPlayer.delegate = self
+        audioPlayer.prepareToPlay()
+        
+    }
+    
+    // ボタンがタップされた時の処理
+    @IBAction func buttonTapped(_ sender : Any) {
+        if ( audioPlayer.isPlaying ){
+            audioPlayer.stop()
+            button.setTitle("Stop", for: UIControl.State())
+        }
+        else{
+            audioPlayer.play()
+            button.setTitle("Play", for: UIControl.State())
+        }
+    }
+    
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+​
+        let configuration = ARWorldTrackingConfiguration()
+​
+        configuration.environmentTexturing = .automatic
+​
+        sceneView.session.run(configuration)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        sceneView.session.pause()
+    }
+    
+    func session(_ session: ARSession, didFailWithError error: Error) {
+        // Present an error message to the user
+        
+    }
+    
+    func sessionWasInterrupted(_ session: ARSession) {
+        // Inform the user that the session has been interrupted, for example, by presenting an overlay
+        
+    }
+    
+    func sessionInterruptionEnded(_ session: ARSession) {
+        // Reset tracking and/or remove existing anchors if consistent tracking is required
+        
+    }
+    
+}
